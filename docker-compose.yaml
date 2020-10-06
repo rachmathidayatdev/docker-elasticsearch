@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  elasticsearchserver1:
+    container_name: elasticsearchserver1
+    image: elasticsearch:7.9.2
+    restart: always
+    networks:
+      - db_network
+    ports:
+      - 9200:9200
+    environment:
+      node.name: elasticsearchserver1
+      cluster.name=: es-docker-cluster
+      discovery.seed_hosts: elasticsearchserver2
+      cluster.initial_master_nodes: elasticsearchserver1,elasticsearchserver2
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data_elasticsearchserver1:/usr/share/elasticsearch/data
+
+  elasticsearchserver2:
+    container_name: elasticsearchserver2
+    image: elasticsearch:7.9.2
+    restart: always
+    networks:
+      - db_network
+    ports:
+      - 9201:9201
+    environment:
+      node.name: elasticsearchserver2
+      cluster.name=: es-docker-cluster
+      discovery.seed_hosts: elasticsearchserver1
+      cluster.initial_master_nodes: elasticsearchserver1,elasticsearchserver2
+      bootstrap.memory_lock: "true"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data_elasticsearchserver2:/usr/share/elasticsearch/data
+
+  kibana:
+    container_name: kibanaserver
+    image: kibana:7.9.2
+    restart: always
+    networks:
+      - db_network
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearchserver1
+      - elasticsearchserver2
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearchserver1:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearchserver1:9200
+
+volumes:
+  data_elasticsearchserver1:
+    driver: local
+  data_elasticsearchserver2:
+    driver: local
+
+networks:
+  db_network:
+    driver: bridge
